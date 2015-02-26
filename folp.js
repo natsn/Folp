@@ -140,7 +140,10 @@ function annGrid(annotations){
   return copy;
 }
 
-
+function stuck(){
+  if(available_positions.length==0)
+    console.log('YOU ARE STUCK!');
+}
 
 function move(keyCode){
   var available_moves = available_positions.map(toKey);
@@ -152,8 +155,8 @@ function move(keyCode){
   } 
 
   // TODO: check if match, remove from grid
-  // TODO: check if stuck
   // TODO: check if win
+  stuck();
   drawGrid(grid);
 }
 
