@@ -61,15 +61,43 @@ function movesAvailable(){
           });
 }
 
-function adjDups(curr_pos){
-  var y = curr_pos[0];
-  var x = curr_pos[1];
+function adjDups(position){
+  var y = position[0];
+  var x = position[1];
+
   return [[y,x+1],[y,x-1],[y+1,x],[y-1,x]].filter(
-    function(p){
-      // only if it does not contain -1 or 6
-      // and the grid spot color matches
-      return !contains(p,[-1,6]) && grid[p[0]][p[1]]==grid[y][x];
-    });
+        function(p){
+          return !contains(p,[-1,6]) && grid[p[0]][p[1]]==grid[y][x];
+        });
+}
+function In(array, item){
+  for (var i = 0; i < array.length; i++) {
+    if(array[i]==item) return true;
+  }
+  return false;
+}
+
+// This only looks at 2 layers...
+function explore(start){
+  var treasure = [];
+  var l0 = adjDups(start);
+
+  for (var i = 0; i < l0.length; i++) {
+    var search_set = adjDups(l0[i]);
+    for (var k = 0; k < search_set.length; k++) {
+      if(!In(treasure, search_set[k])) treasure.push(search_set[k]);
+    }
+  }
+
+  var findings = copy2d(treasure);
+  for (var i = 0; i < findings.length; i++) {
+    var search_set = adjDups(findings[i]);
+    for (var k = 0; k < search_set.length; k++) {
+      if(!In(findings,search_set[k])) treasure.push(search_set[k])
+    }
+  }
+
+  return treasure;
 }
 
 function toKey(coord){
