@@ -40,10 +40,16 @@ var GridModel = Backbone.Model.extend({
       
 var GridGameView = Backbone.View.extend({
   el:'#game',
-  template: _.template('<center><p>score = <%- score %><br>position = [<%- position %>]<br>deck = [<%- deck %>]<br></p>'),
+  template: _.template('<center><%- score %><div class="tile c<%- deck[0] %>"></div><div class="tile c<%- deck[1] %>"></div><div class="tile c<%- deck[2] %>"></div><br>'),
   initialize: function(){
     _.bindAll(this,'keyAction');
     $(document).bind('keydown', this.keyAction);
+  },
+  events:{
+    'click button.reset':'resetGame', // TODO this is broken!
+  },
+  resetGame: function(){
+    console.log('reset')
   },
   render: function(){
     console.log('rendering...');
@@ -52,16 +58,18 @@ var GridGameView = Backbone.View.extend({
           var grid = self.model.get('grid');
           var html_board = '';
           for (var i = 0; i < grid.length; i++) {
-            html_board+='\n';
             for (var k = 0; k < grid[i].length; k++) {
-              html_board+=grid[i][k]+' ';
+              if(i==self.model.get('position')[0]&&k==self.model.get('position')[1])
+                html_board+='<div class="tile c'+grid[i][k]+'">o</div>';
+              else
+                html_board+='<div class="tile c'+grid[i][k]+'"></div>';
             }
-            html_board+='\n';
+            html_board+='<br>';
           }
           html_board+='\n';
           return html_board;
         })();
-    this.$el.html(this.template(this.model.attributes)+'<pre>'+board+'</pre></center>');
+    this.$el.html(this.template(this.model.attributes)+'<br>'+board+'</center>');
     return this;
   },
   // ----------------------------------------
@@ -69,12 +77,12 @@ var GridGameView = Backbone.View.extend({
   // ----------------------------------------
   keyAction: function(e){
     if(this.positionsAvailable()==0){
-      this.model.set('grid',[['y','o','u',' ',' ',' '],
-                             ['l','o','s','e','!','!'],
-                             ['h','a',' ','h','a',' '],
-                             [' ',' ',' ',' ',' ',' '],
-                             [' ',' ',' ',' ',' ',' '],
-                             [' ',' ',' ','l','o','l']]);
+      this.model.set('grid',[['1','1','1','1','1','1'],
+                             ['1','1','1','1','1','1'],
+                             ['1','1','1','1','1','1'],
+                             ['1','1','1','1','1','1'],
+                             ['1','1','1','1','1','1'],
+                             ['1','1','1','1','1','1']]);
       this.render()
     }
     var code = e.keyCode || e.which;

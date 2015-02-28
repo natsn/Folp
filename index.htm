@@ -5,18 +5,41 @@
   <title>Folp</title>
   <style type="text/css">
     body{
-      font-size: 2em;
+      font-size: 1.7em;
       font-family: sans-serif;
     }
-    pre{
-      line-height: .6em;
+    #game{
+      width:400px;
+      margin: 0 auto;
+      padding:10px;
+      border: 1px solid #000;
+      background-color: #eee;
+    }
+    .tile{
+      width: 20px;
+      height: 20px;
+      float:left;
+      margin-right:6px;
+      border:1px solid #000;
+      color:white;
+      font-size: .5em;
+    }
+    .c0{
+      background-color: white;
+    }
+    .c1{
+      background-color: pink;
+    }
+    .c2{
+      background-color: lightgreen;
+    }
+    .c3{
+      background-color: lightblue;
     }
   </style>
 </head>
 <body>
-
 <div id="game"></div>
-
   <script src="assets/jquery-1.11.2.min.js"></script>
   <script src="assets/underscore-min.js"></script>
   <script src="assets/backbone-min.js"></script>
