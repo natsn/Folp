@@ -5,189 +5,199 @@
   INSTRUCTIONS
   Use arrow keys to color squares in different directions. If you make 10
   matches you win. If you get stuck you lose. The next three square colors are
-  on deck. Use this knowledge to plan you next moves.
+  on deck. Use this knowledge to plan you next moves. Enjoy the 6x6 grid!
 
 */
 
-var grid = [];
-var available_positions = [];
-var current_position = [];
-var colors_on_deck = [];
-var score = 0;
-
-function randInt(end){
-  return Math.floor(Math.random()*100) % end;
+function randPos(){
+  return [Math.floor(Math.random()*100)%6,
+          Math.floor(Math.random()*100)%6];
 }
-
-function randColor(){
-  // return 1, 2 or 3
+function randVal(){
   return (Math.floor(Math.random()*100)%3)+1;
 }
 
-function nextColor(){
-  // dequeue color and enqueue random one.
-  var curr = colors_on_deck[0];
-  colors_on_deck[0] = colors_on_deck[1];
-  colors_on_deck[1] = colors_on_deck[2];
-  colors_on_deck[2] = randColor();
-  return curr;
-}
-
-function initGrid(){
-  grid = [];
-  for (var i = 0; i < 6; i++) {
-    grid.push([0,0,0,0,0,0]);
+var GridModel = Backbone.Model.extend({
+  defaults:{
+    deck:[],
+    grid:[[0,0,0,0,0,0],
+          [0,0,0,0,0,0],
+          [0,0,0,0,0,0],
+          [0,0,0,0,0,0],
+          [0,0,0,0,0,0],
+          [0,0,0,0,0,0]],
+    position:[],
+    score:0
+  },
+  initialize: function(){
+    console.log('GridModel initialize function called');
+    console.log(this);
+    this.set('position', randPos());
+    this.get('grid')[this.get('position')[0]][this.get('position')[1]] = randVal(); // why does this work?
+    this.set('deck',[randVal(),randVal(),randVal()]);
   }
-  var y = randInt(6);
-  var x = randInt(6);
-  grid[y][x] = randColor();
-  current_position = [y,x];
-  colors_on_deck = [randColor(),randColor(),randColor()];
-  setAvailableMoves();
-}
-function setAvailableMoves(){
-  available_positions = movesAvailable();
-}
-function movesAvailable(){
-  var y = current_position[0];
-  var x = current_position[1];
-  return [[y,x+1],
-          [y,x-1],
-          [y+1,x],
-          [y-1,x]].filter(function(p){
-            // only if it does not contain -1 or 6
-            // and the grid spot is free
-            return !contains(p,[-1,6]) && grid[p[0]][p[1]]==0; 
+});
+      
+var GridGameView = Backbone.View.extend({
+  el:'#game',
+  template: _.template('<center><p>score = <%- score %><br>position = [<%- position %>]<br>deck = [<%- deck %>]<br></p>'),
+  initialize: function(){
+    _.bindAll(this,'keyAction');
+    $(document).bind('keydown', this.keyAction);
+  },
+  render: function(){
+    console.log('rendering...');
+    var self = this;
+    var board = (function(){
+          var grid = self.model.get('grid');
+          var html_board = '';
+          for (var i = 0; i < grid.length; i++) {
+            html_board+='\n';
+            for (var k = 0; k < grid[i].length; k++) {
+              html_board+=grid[i][k]+' ';
+            }
+            html_board+='\n';
+          }
+          html_board+='\n';
+          return html_board;
+        })();
+    this.$el.html(this.template(this.model.attributes)+'<pre>'+board+'</pre></center>');
+    return this;
+  },
+  // ----------------------------------------
+  // ----------------------------------------
+  // ----------------------------------------
+  keyAction: function(e){
+    var code = e.keyCode || e.which;
+    var target = [];
+    var x = this.model.get('position')[0],
+        y = this.model.get('position')[1];
+    if(code===38) target = [x-1,y];
+    if(code===40) target = [x+1,y];
+    if(code===39) target = [x,y+1];
+    if(code===37) target = [x,y-1];
+    //console.log(this.nextVal(), target)
+
+    if(this.validPosition(target)){
+      var val = this.nextVal();
+      this.model.set('position',target);
+      var g = _.clone(this.model.get('grid'));
+      g[target[0]][target[1]] = val;
+      this.model.set('grid', g);
+      if(this.madeMatch(target)){
+        this.floodFill(this.model.get('grid'), target[1], target[0], null, 0);
+        g[target[0]][target[1]] = val;
+        this.model.set('grid', g);
+        this.model.set('score',this.model.get('score')+1);
+      }
+      this.render();
+    }
+  },
+  // ----------------------------------------
+  // ----------------------------------------
+  // ----------------------------------------
+  contains: function(array,stuff){
+    for (var i = 0; i < array.length; i++) {
+      for (var j = 0; j < stuff.length; j++) {
+        if(array[i]==stuff[j]) return true;
+      }
+    }
+    return false;
+  },
+  validPosition: function(p){
+    var available = this.positionsAvailable()
+    for (var i = 0; i < available.length; i++) {
+      if(available[i][0]==p[0]&&available[i][1]==p[1]) return true;
+    }
+    return false
+  },
+  positionsAvailable: function(){
+    // Returns and array of valid position arrays
+    var y = this.model.get('position')[0],
+        x = this.model.get('position')[1],
+        self = this;
+    return [[y,x+1],
+            [y,x-1],
+            [y+1,x],
+            [y-1,x]].filter(function(p){
+              return !self.contains(p,[-1,6])
+               && self.model.get('grid')[p[0]][p[1]]===0; 
+            });
+  },
+  movesAvailable: function(){
+    // Returns an array of possible valid keycodes
+    var self = this;
+    return this.positionsAvailable().map(function(coord){
+      var y = self.model.get('position')[0],
+          x = self.model.get('position')[1],
+          cy = coord[0],
+          cx = coord[1];
+      if(y-1==cy) return 38;
+      if(y+1==cy) return 40;
+      if(x-1==cx) return 37;
+      if(x+1==cx) return 39;
+    });
+  },
+  nextVal: function(){
+    // dequeue color and enqueue random one.
+    var curr = this.model.get('deck')[0];
+    var d1 = this.model.get('deck')[1];
+    var d2 = this.model.get('deck')[2];
+    this.model.set('deck',[d1,d2,randVal()]);
+    return curr;
+  },
+  adjDups: function(position){
+    var y = position[0];
+    var x = position[1];
+    var self = this;
+    return [[y,x+1],[y,x-1],[y+1,x],[y-1,x]].filter(
+          function(p){
+            return !self.contains(p,[-1,6]) && 
+            self.model.get('grid')[p[0]][p[1]]==
+            self.model.get('grid')[y][x];
           });
-}
-
-function adjDups(position){
-  var y = position[0];
-  var x = position[1];
-
-  return [[y,x+1],[y,x-1],[y+1,x],[y-1,x]].filter(
-        function(p){
-          return !contains(p,[-1,6]) && grid[p[0]][p[1]]==grid[y][x];
-        });
-}
-function In(array, item){
-  for (var i = 0; i < array.length; i++) {
-    if(array[i]==item) return true;
-  }
-  return false;
-}
-
-// This only looks at 2 layers...
-function explore(start){
-  var treasure = [];
-  var l0 = adjDups(start);
-
-  for (var i = 0; i < l0.length; i++) {
-    var search_set = adjDups(l0[i]);
-    for (var k = 0; k < search_set.length; k++) {
-      if(!In(treasure, search_set[k])) treasure.push(search_set[k]);
+  },
+  coordIn: function(array, coord){
+    for (var i = 0; i < array.length; i++) {
+      if(array[i][0]==coord[0] && array[i][1]==coord[1]) return true;
     }
-  }
+    return false;
+  },
+  madeMatch: function(start){
+    
+    var l0 = this.adjDups(start);
+    if(l0.length>=2) return true;
 
-  var findings = copy2d(treasure);
-  for (var i = 0; i < findings.length; i++) {
-    var search_set = adjDups(findings[i]);
-    for (var k = 0; k < search_set.length; k++) {
-      if(!In(findings,search_set[k])) treasure.push(search_set[k])
+    var treasure = [start];
+    for (var i = 0; i < l0.length; i++) {
+      if(!this.coordIn(treasure, l0[i])) treasure.push(l0[i]);
+      var search_set = this.adjDups(l0[i]);
+      for (var k = 0; k < search_set.length; k++) {
+        if(!this.coordIn(treasure, search_set[k])) treasure.push(search_set[k]);
+      }
+      search_set = []
     }
+
+    return treasure.slice(1,treasure.length).length>=2;
+  },
+  floodFill: function(mapData, x, y, oldVal, newVal){
+    var mapWidth = mapData.length,
+        mapHeight = mapData[0].length;
+
+    if(oldVal == null) oldVal = mapData[y][x];
+    if(mapData[y][x] !== oldVal) return true;
+
+    mapData[y][x] = newVal;
+
+    if(x > 0) this.floodFill(mapData, x-1, y, oldVal, newVal); // left
+    if(y > 0) this.floodFill(mapData, x, y-1, oldVal, newVal); // up
+    if(x < mapWidth-1)  this.floodFill(mapData, x+1, y, oldVal, newVal); // right
+    if(y < mapHeight-1) this.floodFill(mapData, x, y+1, oldVal, newVal); // down
   }
+});
 
-  return treasure;
-}
+var grid = new GridModel();
+var game = new GridGameView({model: grid});
+game.listenTo(grid, 'change', game.render);
 
-function toKey(coord){
-  // Compares the current position to the coordinant and returns the direction
-  // up - 38
-  // right - 39
-  // left - 37
-  // down - 40
-  var y = current_position[0];
-  var x = current_position[1];
-  var cy = coord[0];
-  var cx = coord[1];
-  if(y-1==cy){
-    return 38;
-  }
-  if(y+1==cy){
-    return 40;
-  }
-  if(x-1==cx){
-    return 37;
-  }
-  if(x+1==cx){
-    return 39;
-  }
-}
-
-function contains(array,stuff){
-  for (var i = 0; i < array.length; i++) {
-    for (var j = 0; j < stuff.length; j++) {
-      if(array[i]==stuff[j]) return true;
-    }
-  }
-  return false;
-}
-
-function drawGrid(a_grid){
-  console.log('Colors on deck: '+colors_on_deck+'\n')
-  var rendition = '\n';
-  for (var i = 0; i < a_grid.length; i++) {
-    var row = a_grid[i];
-    for (var j = 0; j < row.length; j++) {
-      rendition+=row[j]+' ';
-    }
-    rendition+='\n';
-  }
-  rendition+='current_position = '+current_position+'\n'
-  rendition+='available_moves = '+available_positions.map(toKey)+'\n'
-  rendition+='available_positions = '+available_positions+'\n'
-
-  console.log(rendition);
-}
-
-function copy2d(arr2d){
-  var out = []
-  for (var i = 0; i < arr2d.length; i++) {
-      out.push(arr2d[i].slice());
-  }
-  return out;
-}
-
-function annGrid(annotations){
-  var copy = copy2d(grid);
-  for (var i = 0; i < annotations.length; i++) {
-    var y = annotations[i][0];
-    var x = annotations[i][1];
-    copy[y][x]='X';
-  }
-  return copy;
-}
-
-function stuck(){
-  if(available_positions.length==0)
-    console.log('YOU ARE STUCK!');
-}
-
-function move(keyCode){
-  var available_moves = available_positions.map(toKey);
-  if(contains(available_moves,[keyCode])){
-    var pos = available_positions[_.indexOf(available_moves, keyCode)];
-    current_position = pos;
-    grid[pos[0]][pos[1]] = nextColor();
-    setAvailableMoves();
-  } 
-
-  // TODO: check if match, remove from grid
-  // TODO: check if win
-  stuck();
-  drawGrid(grid);
-}
-
-initGrid();
-setAvailableMoves();
-drawGrid(grid);
+game.render();
