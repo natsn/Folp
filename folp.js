@@ -68,6 +68,15 @@ var GridGameView = Backbone.View.extend({
   // ----------------------------------------
   // ----------------------------------------
   keyAction: function(e){
+    if(this.positionsAvailable()==0){
+      this.model.set('grid',[['y','o','u',' ',' ',' '],
+                             ['l','o','s','e','!','!'],
+                             ['h','a',' ','h','a',' '],
+                             [' ',' ',' ',' ',' ',' '],
+                             [' ',' ',' ',' ',' ',' '],
+                             [' ',' ',' ','l','o','l']]);
+      this.render()
+    }
     var code = e.keyCode || e.which;
     var target = [];
     var x = this.model.get('position')[0],
@@ -88,7 +97,7 @@ var GridGameView = Backbone.View.extend({
         this.floodFill(this.model.get('grid'), target[1], target[0], null, 0);
         g[target[0]][target[1]] = val;
         this.model.set('grid', g);
-        this.model.set('score',this.model.get('score')+1);
+        // score + 1?
       }
       this.render();
     }
@@ -181,6 +190,7 @@ var GridGameView = Backbone.View.extend({
     return treasure.slice(1,treasure.length).length>=2;
   },
   floodFill: function(mapData, x, y, oldVal, newVal){
+    this.model.set('score',this.model.get('score')+1);
     var mapWidth = mapData.length,
         mapHeight = mapData[0].length;
 
