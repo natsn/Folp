@@ -27,11 +27,10 @@ var GridModel = Backbone.Model.extend({
           [0,0,0,0,0,0],
           [0,0,0,0,0,0]],
     position:[],
-    score:0
+    score:0,
+    scores:[]
   },
   initialize: function(){
-    console.log('GridModel initialize function called');
-    console.log(this);
     this.set('position', randPos());
     this.get('grid')[this.get('position')[0]][this.get('position')[1]] = randVal(); // why does this work?
     this.set('deck',[randVal(),randVal(),randVal()]);
@@ -40,49 +39,20 @@ var GridModel = Backbone.Model.extend({
       
 var GridGameView = Backbone.View.extend({
   el:'#game',
-  template: _.template('<center><%- score %><div class="tile c<%- deck[0] %>"></div><div class="tile c<%- deck[1] %>"></div><div class="tile c<%- deck[2] %>"></div><br>'),
+  template: Handlebars.compile($('#folp').html()),
   initialize: function(){
     _.bindAll(this,'keyAction');
     $(document).bind('keydown', this.keyAction);
   },
-  events:{
-    'click button.reset':'resetGame', // TODO this is broken!
-  },
-  resetGame: function(){
-    console.log('reset')
-  },
   render: function(){
-    console.log('rendering...');
-    var self = this;
-    var board = (function(){
-          var grid = self.model.get('grid');
-          var html_board = '';
-          for (var i = 0; i < grid.length; i++) {
-            for (var k = 0; k < grid[i].length; k++) {
-              if(i==self.model.get('position')[0]&&k==self.model.get('position')[1])
-                html_board+='<div class="tile c'+grid[i][k]+'">o</div>';
-              else
-                html_board+='<div class="tile c'+grid[i][k]+'"></div>';
-            }
-            html_board+='<br>';
-          }
-          html_board+='\n';
-          return html_board;
-        })();
-    this.$el.html(this.template(this.model.attributes)+'<br>'+board+'</center>');
+    this.$el.html(this.template(this.model.attributes));
     return this;
   },
-  // ----------------------------------------
-  // ----------------------------------------
-  // ----------------------------------------
   keyAction: function(e){
     if(this.positionsAvailable()==0){
-      this.model.set('grid',[['1','1','1','1','1','1'],
-                             ['1','1','1','1','1','1'],
-                             ['1','1','1','1','1','1'],
-                             ['1','1','1','1','1','1'],
-                             ['1','1','1','1','1','1'],
-                             ['1','1','1','1','1','1']]);
+      console.log(this.model.get('score')+':'+new Date());
+      this.model.set('scores',[{score:this.model.get('score')}].concat(this.model.get('scores')));
+      this.reset();
       this.render()
     }
     var code = e.keyCode || e.which;
@@ -93,8 +63,6 @@ var GridGameView = Backbone.View.extend({
     if(code===40) target = [x+1,y];
     if(code===39) target = [x,y+1];
     if(code===37) target = [x,y-1];
-    //console.log(this.nextVal(), target)
-
     if(this.validPosition(target)){
       var val = this.nextVal();
       this.model.set('position',target);
@@ -105,14 +73,10 @@ var GridGameView = Backbone.View.extend({
         this.floodFill(this.model.get('grid'), target[1], target[0], null, 0);
         g[target[0]][target[1]] = val;
         this.model.set('grid', g);
-        // score + 1?
       }
       this.render();
     }
   },
-  // ----------------------------------------
-  // ----------------------------------------
-  // ----------------------------------------
   contains: function(array,stuff){
     for (var i = 0; i < array.length; i++) {
       for (var j = 0; j < stuff.length; j++) {
@@ -211,7 +175,23 @@ var GridGameView = Backbone.View.extend({
     if(y > 0) this.floodFill(mapData, x, y-1, oldVal, newVal); // up
     if(x < mapWidth-1)  this.floodFill(mapData, x+1, y, oldVal, newVal); // right
     if(y < mapHeight-1) this.floodFill(mapData, x, y+1, oldVal, newVal); // down
+  },
+  reset: function(){
+    var g1 = this.model.get('grid');
+    this.model.set('position', randPos());
+    var p = this.model.get('position');
+    var g2 = g1.map(function(r){return [0,0,0,0,0,0];});
+    g2[p[0]][p[1]] = randVal();
+    this.model.set('grid', g2);
+    this.model.set('score', 0);
+    this.model.set('deck',[randVal(),randVal(),randVal()]);
   }
+});
+
+Handlebars.registerHelper('first', function(context, every, options) {
+  var fn = options.fn, inverse = options.inverse;
+  
+  return ret;
 });
 
 var grid = new GridModel();
